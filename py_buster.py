@@ -2,50 +2,81 @@
 import argparse
 import asyncio
 from random import choice
+import logging
+from logging import config
 
 # Third Party Imports
 import aiohttp
 from aiohttp import client_exceptions
 
+LOGGING_DICT = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "standard": {
+            "format": "%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+            "datefmt": "%Y-%m-%d %H:%M:%S"
+        }
+    },
+    "handlers": {
+        "file_handler": {
+            "class": "logging.FileHandler",
+            "level": "DEBUG",
+            "formatter": "standard",
+            "mode": "w",
+            "filename": "py_buster.log"  # /temp/py_buster.log
+        }
+    },
+    "loggers": {
+        "": {  # root logger
+            "level": "DEBUG",
+            "handlers": ["file_handler"],
+            "propagate": True
+        }
+    }
+}
+
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='Python directory buster. Supply a wordlist with -wl '
-                                                 'option and a target url')
-    parser.add_argument('url', type=str,
-                        help='Please enter a url that will be used to search for hidden directories')
-    parser.add_argument('-ua', '--User_Agent', help='Set User Agent', type=str, required=False,
-                        default='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-                                ' (KHTML, like Gecko) Chrome/73.0.3683.103 Safari/537.36')
-    parser.add_argument('-proxy', '--proxy-file', default=None, required=False,
-                        help='Path for proxy file. Proxies need to be separated by newline '
-                             'and in url format. http://user:pass@ip:port or http://ip:port for no auth')
-    parser.add_argument('-user', '--proxy-username', type=str, required=False, default=None,
-                        help='Username for proxies. Only use if all proxies have same username')
-    parser.add_argument('-pass', '--proxy-password', type=str, required=False, default=None,
-                        help='Password for proxies. Only use if all proxies have same pass')
-    parser.add_argument('-wl', '--wordlist', required=True, help='Path for word list file.')
+    parser = argparse.ArgumentParser(description="Python directory buster. Supply a wordlist with -wl "
+                                                 "option and a target url")
+    parser.add_argument("url", type=str,
+                        help="Please enter a url that will be used to search for hidden directories")
+    parser.add_argument("-ua", "--User_Agent", help="Set User Agent", type=str, required=False,
+                        default="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                                " (KHTML, like Gecko) Chrome/73.0.3683.103 Safari/537.36")
+    parser.add_argument("-proxy", "--proxy-file", default=None, required=False,
+                        help="Path for proxy file. Proxies need to be separated by newline "
+                             "and in url format. http://user:pass@ip:port or http://ip:port for no auth")
+    parser.add_argument("-user", "--proxy-username", type=str, required=False, default=None,
+                        help="Username for proxies. Only use if all proxies have same username")
+    parser.add_argument("-pass", "--proxy-password", type=str, required=False, default=None,
+                        help="Password for proxies. Only use if all proxies have same pass")
+    parser.add_argument("-wl", "--wordlist", required=True, help="Path for word list file.")
 
     return parser.parse_args()
 
 
 async def fetch(session, url, proxy, proxy_auth):
     try:
-        resp = await session.request('GET', url, proxy=proxy, proxy_auth=proxy_auth)
+        resp = await session.get(url, proxy=proxy, proxy_auth=proxy_auth)
         if resp.status == 200:
-            print(url)
-        else:
-            # print(url + '      ', resp.status)
+            logger.info(f"{resp.status} - {url}")
+            print(f"{resp.status} - {url}")
+        elif resp >= 400:
             pass
-
-    except client_exceptions.ClientHttpProxyError as e:
+        else:
+            logging.info(f"{resp.status} - {url}")
+        resp.close()
+    except (client_exceptions.ClientHttpProxyError, client_exceptions.ClientConnectionError) as e:
         #  TODO log error message here. For now, leave print statement
-        print(f'Issue when accessing {url}. Check logs for debug info')
-        print(e.message)
+        print(f"Issue when accessing {url}. Check logs for info")
+        logging.exception(f"Issue accessing {url}")
 
 
 def read_proxy_file(proxy_file):
-    with open(proxy_file, 'r') as fi:
-        proxy_list = ['http://' + proxy.rstrip() for proxy in fi.readlines()]
+    with open(proxy_file, "r") as fi:
+        proxy_list = ["http://" + proxy.rstrip() for proxy in fi.readlines()]
     return proxy_list
 
 
@@ -56,26 +87,29 @@ def read_wordlist_file(wordlist_file):
 
 
 async def create_tasks(url):
-    headers = {'User-Agent': args.User_Agent}
+    headers = {"User-Agent": args.User_Agent}
     tasks = []
     wordlist = read_wordlist_file(args.wordlist)
     async with aiohttp.ClientSession(headers=headers) as session:
         if args.proxy_file:
-            print('gathering proxies')
             proxy_list = read_proxy_file(args.proxy_file)
             if args.proxy_password:
                 proxy_auth = aiohttp.BasicAuth(args.proxy_username, password=args.proxy_password)
             else:
                 proxy_auth = None
             for word in wordlist:
-                tasks.append((fetch(session, url + '/' + word, choice(proxy_list), proxy_auth)))
+                tasks.append((fetch(session, url + "/" + word, choice(proxy_list), proxy_auth)))
         else:
             for word in wordlist:
-                tasks.append((fetch(session, url + '/' + word, None, None)))
+                tasks.append((fetch(session, url + "/" + word, None, None)))
         tasks = await asyncio.gather(*tasks, return_exceptions=True)
         return tasks
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     args = parse_args()
+    logger = logging.getLogger(__name__)
+    logging.config.dictConfig(LOGGING_DICT)
+    logger.debug("Starting logging")
     loop = asyncio.get_event_loop()
     loop.run_until_complete(create_tasks(args.url))
