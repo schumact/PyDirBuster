@@ -9,7 +9,8 @@ from logging import config
 # Third Party Imports
 import aiohttp
 from aiohttp import client_exceptions
-from colorama import Back, Fore, Style, init
+from colorama import init
+from termcolor import colored
 
 
 LOGGING_DICT = {
@@ -65,7 +66,7 @@ async def fetch(session, url, proxy, proxy_auth):
         resp = await session.get(url, proxy=proxy, proxy_auth=proxy_auth)
         if resp.status == 200:
             logger.info(f"{resp.status} - {url}")
-            print(Fore.GREEN + f"{resp.status} - {url}")
+            print(colored(f"{resp.status} - {url}", "green"))
         elif resp >= 400:
             pass
         else:
@@ -73,7 +74,7 @@ async def fetch(session, url, proxy, proxy_auth):
         resp.close()
     except (client_exceptions.ClientHttpProxyError, client_exceptions.ClientConnectionError) as e:
         #  TODO log error message here. For now, leave print statement
-        print(Fore.RED + f"Issue when accessing {url}. Check logs for info")
+        print(colored(f"Issue when accessing {url}. Check logs for info", "red"))
         logging.exception(f"Issue accessing {url}")
 
 
@@ -111,6 +112,7 @@ async def create_tasks(url):
 
 if __name__ == "__main__":
     args = parse_args()
+    init()
     logger = logging.getLogger(__name__)
     logging.config.dictConfig(LOGGING_DICT)
     loop = asyncio.get_event_loop()
