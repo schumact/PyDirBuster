@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # Standard Library Imports
 import argparse
 import asyncio
@@ -8,6 +9,8 @@ from logging import config
 # Third Party Imports
 import aiohttp
 from aiohttp import client_exceptions
+from colorama import Back, Fore, Style, init
+
 
 LOGGING_DICT = {
     "version": 1,
@@ -62,7 +65,7 @@ async def fetch(session, url, proxy, proxy_auth):
         resp = await session.get(url, proxy=proxy, proxy_auth=proxy_auth)
         if resp.status == 200:
             logger.info(f"{resp.status} - {url}")
-            print(f"{resp.status} - {url}")
+            print(Fore.GREEN + f"{resp.status} - {url}")
         elif resp >= 400:
             pass
         else:
@@ -70,7 +73,7 @@ async def fetch(session, url, proxy, proxy_auth):
         resp.close()
     except (client_exceptions.ClientHttpProxyError, client_exceptions.ClientConnectionError) as e:
         #  TODO log error message here. For now, leave print statement
-        print(f"Issue when accessing {url}. Check logs for info")
+        print(Fore.RED + f"Issue when accessing {url}. Check logs for info")
         logging.exception(f"Issue accessing {url}")
 
 
@@ -110,6 +113,5 @@ if __name__ == "__main__":
     args = parse_args()
     logger = logging.getLogger(__name__)
     logging.config.dictConfig(LOGGING_DICT)
-    logger.debug("Starting logging")
     loop = asyncio.get_event_loop()
     loop.run_until_complete(create_tasks(args.url))
