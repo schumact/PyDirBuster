@@ -49,13 +49,15 @@ def parse_args():
     parser.add_argument("-ua", "--User_Agent", help="Set User Agent", type=str, required=False,
                         default="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
                                 " (KHTML, like Gecko) Chrome/73.0.3683.103 Safari/537.36")
-    parser.add_argument("-proxy", "--proxy-file", default=None, required=False,
+    parser.add_argument("-proxy", "--proxy_file", default=None, required=False,
                         help="Path for proxy file. Proxies need to be separated by newline "
                              "and in url format. http://user:pass@ip:port or http://ip:port for no auth")
-    parser.add_argument("-user", "--proxy-username", type=str, required=False, default=None,
-                        help="Username for proxies. Only use if all proxies have same username")
-    parser.add_argument("-pass", "--proxy-password", type=str, required=False, default=None,
-                        help="Password for proxies. Only use if all proxies have same pass")
+    parser.add_argument("-user", "--proxy_username", type=str, required=False, default=None,
+                        help="Username for proxies. Only use if all proxies have same username and"
+                             "if proxy file does not include user info. Ex. format, ip:port")
+    parser.add_argument("-pass", "--proxy_password", type=str, required=False, default=None,
+                        help="Password for proxies. Only use if all proxies have same pass and if "
+                             "proxy file does not include user info. Ex. format, ip:port")
     parser.add_argument("-wl", "--wordlist", required=True, help="Path for word list file.")
 
     return parser.parse_args()
